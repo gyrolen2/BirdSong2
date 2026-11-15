@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101823">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>BirdSong Codec Lab v2</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23101823'/%3E%3Cpath d='M10 38c6-14 12-14 18 0s12 14 18 0 8-10 8-10' stroke='%234cc38a' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#101823; --card:#192434; --card2:#213045; --txt:#edf3fa;
+  --dim:#8ea3bd; --acc:#4cc38a; --acc2:#38bdf8; --warn:#f87171; --amber:#fbbf24;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  margin:0 auto; background:var(--bg); color:var(--txt);
+  font:15px/1.4 system-ui,-apple-system,sans-serif;
+  padding:12px 12px 96px; max-width:560px;
+}
+header{display:flex;justify-content:space-between;align-items:center;margin:2px 0 10px}
+h1{font-size:18px;margin:0;letter-spacing:-0.01em}
+.badge{font-size:11px;padding:3px 8px;border-radius:999px;background:var(--card2);color:var(--acc);font-weight:700}
+.card{background:var(--card);border-radius:14px;padding:12px;margin-bottom:12px;border:1px solid rgba(255,255,255,.05)}
+.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);margin:0 0 8px}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+button{
+  background:var(--card2); color:var(--txt); border:1px solid rgba(255,255,255,.08);
+  border-radius:10px; padding:10px 12px; font-size:13px; font-weight:600;
+  touch-action:manipulation; cursor:pointer;
+}
+button:active{transform:scale(.98);filter:brightness(1.2)}
+button:disabled{opacity:.42;pointer-events:none}
+button.primary{background:var(--acc);color:#06160e;border:0}
+button.active-ab{background:var(--acc2);color:#06131c;border:0}
+.step-btn{padding:6px 11px;font-size:15px;line-height:1;min-width:34px}
+
+.metric-box{background:var(--bg);border-radius:10px;padding:9px 10px;border:1px solid rgba(255,255,255,.06)}
+.metric-val{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+.metric-lbl{font-size:11px;color:var(--dim)}
+.pass{color:var(--acc)} .warn{color:var(--amber)} .fail{color:var(--warn)}
+
+.bar-wrap{height:10px;border-radius:999px;background:var(--bg);overflow:hidden;display:flex;margin:8px 0 4px}
+.seg-hdr{background:#64748b} .seg-frm{background:#38bdf8} .seg-frq{background:#4cc38a} .seg-amp{background:#fbbf24}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--dim)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+
+.slider{margin:11px 0;padding-top:8px;border-top:1px solid rgba(255,255,255,.05)}
+.slider:first-child{border-top:0;padding-top:0;margin-top:4px}
+.s-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
+.s-top label{font-size:13px;color:var(--txt);font-weight:500}
+.s-ctrl{display:flex;align-items:center;gap:6px}
+.s-ctrl output{min-width:64px;text-align:right;font-variant-numeric:tabular-nums;font-size:13px;font-weight:700;color:var(--acc)}
+input[type=range]{width:100%;accent-color:var(--acc);height:28px;margin:0}
+.hint{font-size:11px;color:var(--dim);margin-top:2px}
+
+.toggle-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid rgba(255,255,255,.05)}
+.toggle-row:first-child{border-top:0;padding-top:2px}
+input[type=checkbox]{width:20px;height:20px;accent-color:var(--acc)}
+
+canvas.wave{width:100%;height:56px;background:var(--bg);border-radius:8px;display:block;margin-top:6px}
+.cv-lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-top:6px}
+#qrBox{display:flex;gap:12px;align-items:center;margin-top:8px}
+#cvQr{width:136px;height:136px;background:#fff;padding:6px;border-radius:8px;flex-shrink:0;image-rendering:pixelated}
+.small{font-size:12px;color:var(--dim)}
+.insight{font-size:12px;background:rgba(76,195,138,.1);border-left:3px solid var(--acc);padding:8px 10px;border-radius:6px;margin-top:8px}
+
+.dock{
+  position:fixed;left:0;right:0;bottom:0;background:rgba(16,24,35,.95);
+  backdrop-filter:blur(10px);border-top:1px solid rgba(255,255,255,.1);
+  padding:8px 12px calc(8px + env(safe-area-inset-bottom));z-index:20;
+}
+.dock-inner{max-width:560px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>BirdSong Codec Lab</h1>
+  <span class="badge">BC2 &lt; 500B PWA</span>
+</header>
+
+<div class="card">
+  <div class="row">
+    <button class="primary" id="btnLoad">Load .wav</button>
+    <input type="file" id="file" accept=".wav,audio/wav,audio/x-wav" hidden>
+    <button id="btnDemo">Sample Birdsong</button>
+    <button id="btnAutoFit" disabled>Auto-Fit &lt; Target</button>
+  </div>
+  <div class="small" id="fileInfo" style="margin-top:6px">Load a 5s .wav or tap "Sample Birdsong" to begin.</div>
+
+  <div id="trimBox" style="display:none;margin-top:8px">
+    <div class="s-top">
+      <label style="font-size:12px;color:var(--dim)">5.0s Window Start Offset</label>
+      <output id="o-offset" style="font-size:12px;color:var(--acc2);font-weight:700">0.0 s</output>
+    </div>
+    <input type="range" id="s-offset" min="0" max="10" step="0.1" value="0">
+  </div>
+
+  <div class="cv-lbl"><span>Original (5.0s @ 16kHz)</span><span id="origPeakLbl"></span></div>
+  <canvas class="wave" id="cvOrig"></canvas>
+  <div class="cv-lbl"><span>Decoded Preview (.wav)</span><span id="decStatsLbl"></span></div>
+  <canvas class="wave" id="cvDec"></canvas>
+  <audio id="player" controls style="width:100%;margin-top:8px;height:36px"></audio>
+</div>
+
+<div class="card">
+  <h2>Payload Budget &amp; Fixed-System Metrics</h2>
+  <div class="grid2">
+    <div class="metric-box">
+      <div class="metric-val" id="mRawBytes">-- B</div>
+      <div class="metric-lbl" id="mRawSub">Raw binary (.bc2)</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-val" id="mQrChars">-- ch</div>
+      <div class="metric-lbl" id="mQrSub">QR Base64 (phone-safe)</div>
+    </div>
+  </div>
+
+  <div class="bar-wrap" id="byteBar">
+    <div class="seg-hdr" id="segHdr" style="width:10%"></div>
+    <div class="seg-frm" id="segFrm" style="width:15%"></div>
+    <div class="seg-frq" id="segFrq" style="width:45%"></div>
+    <div class="seg-amp" id="segAmp" style="width:30%"></div>
+  </div>
+  <div class="legend" id="byteLegend">
+    <span><i class="dot" style="background:#64748b"></i>Header</span>
+    <span><i class="dot" style="background:#38bdf8"></i>Frames</span>
+    <span><i class="dot" style="background:#4cc38a"></i>Freq</span>
+    <span><i class="dot" style="background:#fbbf24"></i>Amp</span>
+  </div>
+  <div class="insight" id="factorInsight">Adjust sliders below to see which factors dominate byte cost and audio clarity.</div>
+</div>
+
+<div class="card">
+  <h2>Budget &amp; Presets</h2>
+  <div class="row" style="margin-bottom:8px">
+    <button data-preset="qr480">QR &lt; 480B</button>
+    <button data-preset="trill">Fast Trill</button>
+    <button data-preset="pure">Pure Whistle</button>
+    <button id="btnReset">Reset</button>
+  </div>
+
+  <div class="slider">
+    <div class="s-top">
+      <label>Max Target Size</label>
+      <div class="s-ctrl">
+        <button class="step-btn" data-step="target" data-dir="-1">-</button>
+        <output id="o-target">480 B</output>
+        <button class="step-btn" data-step="target" data-dir="1">+</button>
+      </div>
+    </div>
+    <input type="range" id="s-target" min="150" max="800" step="10">
+  </div>
+
+  <div class="toggle-row">
+    <div>
+      <div style="font-size:13px;font-weight:600">Enforce Max Bytes (&lt; Target)</div>
+      <div class="hint">Auto-prunes weakest secondary partials to stay under target</div>
+    </div>
+    <input type="checkbox" id="c-enforce">
+  </div>
+
+  <div class="toggle-row">
+    <div>
+      <div style="font-size:13px;font-weight:600">Track Continuity (Anti-Glissando)</div>
+      <div class="hint">Locks oscillators to nearest pitch across frames</div>
+    </div>
+    <input type="checkbox" id="c-track">
+  </div>
+</div>
+
+<div class="card">
+  <h2>Codec Parameters (Test Importance)</h2>
+  <div id="sliders"></div>
+</div>
+
+<div class="card">
+  <h2>QR Code &amp; Export</h2>
+  <div class="row">
+    <button id="btnWav" disabled>Save Decoded .wav</button>
+    <button id="btnBc2" disabled>Save .bc2</button>
+    <button id="btnCopyB64" disabled>Copy QR Base64</button>
+  </div>
+  <div id="qrBox">
+    <canvas id="cvQr" width="160" height="160"></canvas>
+    <div class="small" id="qrMeta">
+      Scan test: encodes Base64 payload so standard iOS/Android camera readers never corrupt binary bytes.
+    </div>
+  </div>
+</div>
+
+<div class="dock">
+  <div class="dock-inner">
+    <button id="btnPlayOrig" disabled>Orig</button>
+    <button id="btnPlayDec" class="primary" disabled>Decoded</button>
+    <button id="btnLoop">Loop: Off</button>
+    <button id="btnAb" disabled>A/B</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+const SR = 16000, NFFT = 1024, MAX_SEC = 5.0;
+const DBMIN = -68, DBMAX = 0;
+
+const DEF = {
+  target: 480, enforce: true, track: true,
+  fps: 22, maxk: 5, nf: 10, na: 6,
+  winMs: 16, thresh: 48, floor: -44, sepHz: 140,
+  preEmph: 55, fmin: 800, fmax: 7500
+};
+
+const PRESETS = {
+  qr480: {target:480, enforce:true, track:true, fps:22, maxk:5, nf:10, na:6, winMs:16, thresh:48, floor:-44, sepHz:140, preEmph:55, fmin:800, fmax:7500},
+  trill: {target:480, enforce:true, track:true, fps:30, maxk:4, nf:9,  na:5, winMs:12, thresh:45, floor:-42, sepHz:160, preEmph:65, fmin:1000, fmax:7600},
+  pure:  {target:480, enforce:true, track:true, fps:18, maxk:6, nf:11, na:7, winMs:24, thresh:54, floor:-46, sepHz:120, preEmph:45, fmin:700, fmax:7400}
+};
+
+const META = [
+  ["fps",     "Frame Rate (Time Resolution)", 10, 40,  1,  " fps", "Higher = sharper rapid trills, linearly increases bytes"],
+  ["maxk",    "Max Partials / Frame",         1,  10,  1,  "",     "Simultaneous harmonics per frame; 3–6 covers most birds"],
+  ["nf",      "Frequency Resolution",         7,  13,  1,  " bits","10 bits ≈ 3.8 cents/step; <9 bits causes pitch stair-stepping"],
+  ["na",      "Amplitude Resolution",         4,  10,  1,  " bits","6 bits ≈ 1.1 dB/step; usually needs fewer bits than pitch"],
+  ["winMs",   "FFT Window Length",            12, 32,  2,  " ms",  "Short (12–16ms) catches fast chirps; longer separates close tones"],
+  ["thresh",  "Harmonic Peak Threshold",      25, 72,  1,  " dB",  "Captures softer overtones below the loudest peak"],
+  ["floor",   "Silence Gate Floor",           -65,-25, 1,  " dB",  "Silent frames cost only 1 bit! Raise to skip background hiss"],
+  ["sepHz",   "Min Partial Spacing",          60, 400, 10, " Hz",  "Prevents double-picking the same spectral peak"],
+  ["preEmph", "High-Freq Pre-Emphasis",       0,  100, 5,  "%",    "Boosts faint upper harmonics during analysis, restores on playback"],
+  ["fmin",    "Min Frequency Cutoff",         300,2500,50, " Hz",  "Cut low wind/rumble to concentrate pitch bits on birdsong"],
+  ["fmax",    "Max Frequency Cutoff",         4000,7800,100," Hz", "Upper vocal ceiling (8000 Hz Nyquist)"]
+];
+
+let P = loadParams();
+let fullAudio = null, clipAudio = null, decoded = null, bitstream = null;
+let timer = null, abMode = "dec", loopOn = false, offsetSec = 0;
+
+function loadParams(){
+  try{ return Object.assign({}, DEF, JSON.parse(localStorage.getItem("birdlab_v2")||"{}")); }
+  catch(e){ return Object.assign({}, DEF); }
+}
+function saveParams(){ localStorage.setItem("birdlab_v2", JSON.stringify(P)); }
+
+/* ---------- Build UI ---------- */
+const slBox = document.getElementById("sliders");
+for(const [key, label, mn, mx, st, unit, hint] of META){
+  const div = document.createElement("div");
+  div.className = "slider";
+  div.innerHTML = `
+    <div class="s-top">
+      <label for="s-${key}">${label}</label>
+      <div class="s-ctrl">
+        <button class="step-btn" data-step="${key}" data-dir="-1">-</button>
+        <output id="o-${key}"></output>
+        <button class="step-btn" data-step="${key}" data-dir="1">+</button>
+      </div>
+    </div>
+    <input type="range" id="s-${key}" min="${mn}" max="${mx}" step="${st}">
+    <div class="hint">${hint}</div>`;
+  slBox.appendChild(div);
+  const inp = div.querySelector("input");
+  inp.value = P[key];
+  const show = () => document.getElementById("o-" + key).textContent = inp.value + unit;
+  show();
+  inp.addEventListener("input", () => { P[key] = +inp.value; show(); saveParams(); schedule(); });
+}
+
+const tInp = document.getElementById("s-target");
+tInp.value = P.target;
+const tShow = () => document.getElementById("o-target").textContent = P.target + " B";
+tShow();
+tInp.addEventListener("input", () => { P.target = +tInp.value; tShow(); saveParams(); schedule(); });
+
+const cEnforce = document.getElementById("c-enforce");
+const cTrack = document.getElementById("c-track");
+cEnforce.checked = !!P.enforce;
+cTrack.checked = !!P.track;
+cEnforce.addEventListener("change", () => { P.enforce = cEnforce.checked; saveParams(); schedule(); });
+cTrack.addEventListener("change", () => { P.track = cTrack.checked; saveParams(); schedule(); });
+
+document.querySelectorAll(".step-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const key = btn.dataset.step, dir = +btn.dataset.dir;
+    const inp = document.getElementById("s-" + key);
+    const step = +inp.step || 1;
+    const next = Math.max(+inp.min, Math.min(+inp.max, (+inp.value) + dir * step));
+    inp.value = next;
+    inp.dispatchEvent(new Event("input"));
+  });
+});
+
+document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", () => {
+  Object.assign(P, PRESETS[b.dataset.preset]);
+  syncUI(); saveParams(); run();
+}));
+document.getElementById("btnReset").addEventListener("click", () => {
+  P = Object.assign({}, DEF);
+  syncUI(); saveParams(); run();
+});
+
+function syncUI(){
+  for(const [key] of META){
+    const inp = document.getElementById("s-" + key);
+    inp.value = P[key];
+    inp.dispatchEvent(new Event("input"));
+  }
+  tInp.value = P.target; tShow();
+  cEnforce.checked = !!P.enforce;
+  cTrack.checked = !!P.track;
+}
+
+/* ---------- WAV I/O & Resampling ---------- */
+function parseWav(buf){
+  const dv = new DataView(buf);
+  if(dv.getUint32(0,true) !== 0x46464952) throw "Not a valid RIFF/WAV file";
+  let off = 12, fmt = null, dataOff = -1, dataLen = 0;
+  while(off + 8 <= dv.byteLength){
+    const id = dv.getUint32(off,true), sz = dv.getUint32(off+4,true);
+    if(id === 0x20746d66){
+      fmt = {
+        format: dv.getUint16(off+8,true),
+        ch: dv.getUint16(off+10,true),
+        sr: dv.getUint32(off+12,true),
+        bits: dv.getUint16(off+22,true)
+      };
+    } else if(id === 0x61746164){
+      dataOff = off + 8;
+      dataLen = Math.min(sz, dv.byteLength - dataOff);
+    }
+    off += 8 + sz + (sz & 1);
+  }
+  if(!fmt || dataOff < 0) throw "Missing fmt/data chunks";
+  const bytesPerSamp = fmt.bits / 8;
+  const n = Math.floor(dataLen / bytesPerSamp / fmt.ch);
+  const x = new Float64Array(n);
+  for(let i = 0; i < n; i++){
+    let v = 0;
+    for(let c = 0; c < fmt.ch; c++){
+      const p = dataOff + (i * fmt.ch + c) * bytesPerSamp;
+      if(fmt.format === 1 && fmt.bits === 16) v += dv.getInt16(p,true) / 32768;
+      else if(fmt.format === 1 && fmt.bits === 24){
+        const b0 = dv.getUint8(p), b1 = dv.getUint8(p+1), b2 = dv.getInt8(p+2);
+        v += ((b2 << 16) | (b1 << 8) | b0) / 8388608;
+      }
+      else if(fmt.format === 3 && fmt.bits === 32) v += dv.getFloat32(p,true);
+      else if(fmt.format === 1 && fmt.bits === 8) v += (dv.getUint8(p) - 128) / 128;
+      else throw "Unsupported WAV format (use 8/16/24-bit PCM or 32-bit float)";
+    }
+    x[i] = v / fmt.ch;
+  }
+  return {x, sr: fmt.sr};
+}
+
+function resample(x, srFrom){
+  if(srFrom === SR) return x;
+  const a = Math.min(1, (SR / srFrom) * 2.4);
+  const y = new Float64Array(x.length);
+  let lp = 0;
+  for(let i = 0; i < x.length; i++){ lp += a * (x[i] - lp); y[i] = lp; }
+  const ratio = srFrom / SR, n = Math.round(x.length / ratio), out = new Float64Array(n);
+  for(let i = 0; i < n; i++){
+    const pos = i * ratio, i0 = Math.floor(pos), fr = pos - i0;
+    out[i] = (y[i0] || 0) + (((y[i0+1] || 0) - (y[i0] || 0)) * fr);
+  }
+  return out;
+}
+
+function toWav16(sig){
+  const n = sig.length, buf = new ArrayBuffer(44 + n * 2), dv = new DataView(buf);
+  const wstr = (o, s) => { for(let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+  wstr(0,"RIFF"); dv.setUint32(4, 36 + n * 2, true); wstr(8,"WAVE");
+  wstr(12,"fmt "); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true);
+  dv.setUint16(22, 1, true); dv.setUint32(24, SR, true); dv.setUint32(28, SR * 2, true);
+  dv.setUint16(32, 2, true); dv.setUint16(34, 16, true);
+  wstr(36,"data"); dv.setUint32(40, n * 2, true);
+  for(let i = 0; i < n; i++){
+    const v = Math.max(-1, Math.min(1, sig[i]));
+    dv.setInt16(44 + 2 * i, Math.round(v * 32767), true);
+  }
+  return new Blob([buf], {type:"audio/wav"});
+}
+
+/* ---------- Synthetic 5s Birdsong Generator ---------- */
+function generateSampleBirdsong(){
+  const n = SR * 5, x = new Float64Array(n);
+  let ph1 = 0, ph2 = 0, ph3 = 0;
+  for(let i = 0; i < n; i++){
+    const t = i / SR;
+    let s = 0;
+    // Phrase 1 (0.2s - 1.1s): ascending flute whistle + 2nd harmonic
+    if(t >= 0.2 && t < 1.1){
+      const u = (t - 0.2) / 0.9;
+      const env = Math.sin(Math.PI * u) ** 1.4;
+      const f = 2400 + 1400 * (u ** 1.3) + 45 * Math.sin(2 * Math.PI * 14 * t);
+      ph1 += 2 * Math.PI * f / SR;
+      ph2 += 2 * Math.PI * (f * 2) / SR;
+      s += env * (0.65 * Math.sin(ph1) + 0.22 * Math.sin(ph2));
+    }
+    // Phrase 2 (1.5s - 2.7s): rapid warble trill (18 Hz FM)
+    if(t >= 1.5 && t < 2.7){
+      const u = (t - 1.5) / 1.2;
+      const env = Math.sin(Math.PI * u) * (0.65 + 0.35 * Math.sin(2 * Math.PI * 18 * t));
+      const f = 3600 + 650 * Math.sin(2 * Math.PI * 18 * t) - 500 * u;
+      ph1 += 2 * Math.PI * f / SR;
+      ph3 += 2 * Math.PI * (f * 1.5) / SR;
+      s += env * (0.7 * Math.sin(ph1) + 0.18 * Math.sin(ph3));
+    }
+    // Phrase 3 (3.2s - 4.5s): three crisp descending chirps
+    if(t >= 3.2 && t < 4.5){
+      const local = (t - 3.2) % 0.43;
+      if(local < 0.26){
+        const u = local / 0.26;
+        const env = Math.sin(Math.PI * u);
+        const f = 5200 - 2300 * (u ** 0.8);
+        ph1 += 2 * Math.PI * f / SR;
+        ph2 += 2 * Math.PI * (f * 1.49) / SR;
+        s += env * (0.72 * Math.sin(ph1) + 0.2 * Math.sin(ph2));
+      }
+    }
+    // Subtle natural breeze floor
+    s += (Math.random() * 2 - 1) * 0.004;
+    x[i] = s;
+  }
+  return x;
+}
+
+/* ---------- DSP & FFT ---------- */
+function fft(re, im){
+  const n = re.length;
+  for(let i = 1, j = 0; i < n; i++){
+    let bit = n >> 1;
+    for(; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if(i < j){
+      let t = re[i]; re[i] = re[j]; re[j] = t;
+      t = im[i]; im[i] = im[j]; im[j] = t;
+    }
+  }
+  for(let len = 2; len <= n; len <<= 1){
+    const ang = -2 * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang);
+    for(let i = 0; i < n; i += len){
+      let cwr = 1, cwi = 0;
+      for(let j = 0; j < len / 2; j++){
+        const ur = re[i+j], ui = im[i+j];
+        const vr = re[i+j+len/2] * cwr - im[i+j+len/2] * cwi;
+        const vi = re[i+j+len/2] * cwi + im[i+j+len/2] * cwr;
+        re[i+j] = ur + vr; im[i+j] = ui + vi;
+        re[i+j+len/2] = ur - vr; im[i+j+len/2] = ui - vi;
+        const t = cwr * wr - cwi * wi; cwi = cwr * wi + cwi * wr; cwr = t;
+      }
+    }
+  }
+}
+
+/* ---------- Bitstream I/O ---------- */
+class BitW{
+  constructor(){ this.buf = []; this.acc = 0; this.n = 0; }
+  w(v, b){
+    for(let i = b - 1; i >= 0; i--){
+      this.acc = (this.acc << 1) | ((v >>> i) & 1);
+      if(++this.n === 8){ this.buf.push(this.acc & 255); this.acc = 0; this.n = 0; }
+    }
+  }
+  bytes(){
+    if(this.n > 0){ this.buf.push((this.acc << (8 - this.n)) & 255); this.acc = 0; this.n = 0; }
+    return new Uint8Array(this.buf);
+  }
+}
+class BitR{
+  constructor(d){ this.d = d; this.pos = 0; }
+  r(b){
+    let v = 0;
+    for(let i = 0; i < b; i++){
+      v = (v << 1) | ((this.d[this.pos >> 3] >>> (7 - (this.pos & 7))) & 1);
+      this.pos++;
+    }
+    return v;
+  }
+}
+
+/* ---------- BC2 Encoder / Decoder ---------- */
+function dequantF(q, fmin, fmax, bits){ return fmin * Math.pow(fmax / fmin, q / ((1 << bits) - 1)); }
+function dequantA(q, bits){ return DBMIN + (q / ((1 << bits) - 1)) * (DBMAX - DBMIN); }
+
+function analyzeAndPack(x){
+  const hop = Math.round(SR / P.fps);
+  const nf = Math.min(511, Math.ceil(x.length / hop));
+  const fmin = Math.min(P.fmin, P.fmax - 500);
+  const fmax = Math.max(P.fmax, fmin + 500);
+  const alpha = (P.preEmph / 100) * 0.92;
+
+  // Pre-emphasis filter to lift high bird harmonics
+  const xp = new Float64Array(x.length);
+  for(let i = 0; i < x.length; i++) xp[i] = x[i] - alpha * (i > 0 ? x[i-1] : 0);
+
+  const winLen = Math.min(NFFT, Math.max(64, Math.round(SR * P.winMs / 1000)));
+  const win = new Float64Array(winLen);
+  for(let i = 0; i < winLen; i++) win[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (winLen - 1));
+
+  const floorAmp = Math.pow(10, P.floor / 20);
+  const thDb = -Math.abs(P.thresh);
+  const sepBins = Math.max(2, Math.round(P.sepHz / (SR / NFFT)));
+  const NB = NFFT / 2 + 1;
+
+  // Track state for nearest-frequency slot assignment
+  const slotFreq = new Float64Array(P.maxk).fill(-1);
+  const slotAge = new Int32Array(P.maxk).fill(99);
+  const frames = [];
+
+  for(let n = 0; n < nf; n++){
+    const center = n * hop + Math.floor(hop / 2);
+    const start = center - Math.floor(winLen / 2);
+    const re = new Float64Array(NFFT), im = new Float64Array(NFFT);
+    for(let i = 0; i < winLen; i++){
+      const idx = start + i;
+      if(idx >= 0 && idx < xp.length) re[i] = xp[idx] * win[i];
+    }
+    fft(re, im);
+
+    const X = new Float64Array(NB), XdB = new Float64Array(NB);
+    let maxMag = 0;
+    for(let b = 0; b < NB; b++){
+      X[b] = Math.hypot(re[b], im[b]);
+      const f = b * SR / NFFT;
+      if(f >= fmin && f <= fmax && X[b] > maxMag) maxMag = X[b];
+    }
+
+    const peakAmp = 4 * maxMag / winLen;
+    if(peakAmp < floorAmp){
+      frames.push([]);
+      for(let k = 0; k < P.maxk; k++) slotAge[k]++;
+      continue;
+    }
+
+    for(let b = 0; b < NB; b++) XdB[b] = 20 * Math.log10(X[b] + 1e-9);
+    const topDb = 20 * Math.log10(maxMag + 1e-9);
+    const pk = [];
+    for(let b = 2; b < NB - 2; b++){
+      const f = b * SR / NFFT;
+      if(f < fmin || f > fmax) continue;
+      if(XdB[b] >= topDb + thDb && XdB[b] >= XdB[b-1] && XdB[b] >= XdB[b+1] &&
+         XdB[b] >= XdB[b-2] && XdB[b] >= XdB[b+2]){
+        pk.push([XdB[b], b]);
+      }
+    }
+    pk.sort((a, b) => b[0] - a[0]);
+
+    const chosen = [];
+    for(const e of pk){
+      if(chosen.every(c => Math.abs(e[1] - c[1]) >= sepBins)) chosen.push(e);
+      if(chosen.length >= P.maxk) break;
+    }
+
+    // Parabolic interpolation + quantization
+    const cands = chosen.map((e, rank) => {
+      const b = e[1];
+      const den = XdB[b-1] - 2 * XdB[b] + XdB[b+1];
+      const off = den !== 0 ? Math.max(-0.5, Math.min(0.5, 0.5 * (XdB[b-1] - XdB[b+1]) / den)) : 0;
+      const freq = Math.max(fmin, Math.min(fmax, (b + off) * SR / NFFT));
+      const amp = 4 * X[b] / winLen;
+      const db = Math.max(DBMIN, Math.min(DBMAX, 20 * Math.log10(Math.max(amp, 1e-6))));
+      const qf = Math.max(0, Math.min((1 << P.nf) - 1,
+        Math.round(Math.log(freq / fmin) / Math.log(fmax / fmin) * ((1 << P.nf) - 1))));
+      const qa = Math.max(1, Math.min((1 << P.na) - 1,
+        Math.round((db - DBMIN) / (DBMAX - DBMIN) * ((1 << P.na) - 1))));
+      return {freq, db, qf, qa, rank, track: 0, score: (db - DBMIN) - rank * 6};
+    });
+
+    if(P.track){
+      const usedSlot = new Uint8Array(P.maxk);
+      const assigned = new Uint8Array(cands.length);
+      // Greedy nearest-frequency matching within 400 Hz
+      const pairs = [];
+      for(let ci = 0; ci < cands.length; ci++){
+        for(let k = 0; k < P.maxk; k++){
+          if(slotFreq[k] > 0 && slotAge[k] <= 3){
+            const df = Math.abs(cands[ci].freq - slotFreq[k]);
+            if(df <= 420) pairs.push({ci, k, cost: df + slotAge[k] * 40});
+          }
+        }
+      }
+      pairs.sort((a, b) => a.cost - b.cost);
+      for(const pr of pairs){
+        if(!assigned[pr.ci] && !usedSlot[pr.k]){
+          assigned[pr.ci] = 1; usedSlot[pr.k] = 1;
+          cands[pr.ci].track = pr.k;
+          slotFreq[pr.k] = cands[pr.ci].freq;
+          slotAge[pr.k] = 0;
+        }
+      }
+      for(let ci = 0; ci < cands.length; ci++){
+        if(!assigned[ci]){
+          let bestK = 0, bestAge = -1;
+          for(let k = 0; k < P.maxk; k++){
+            if(!usedSlot[k] && slotAge[k] > bestAge){ bestAge = slotAge[k]; bestK = k; }
+          }
+          usedSlot[bestK] = 1;
+          cands[ci].track = bestK;
+          slotFreq[bestK] = cands[ci].freq;
+          slotAge[bestK] = 0;
+        }
+      }
+      for(let k = 0; k < P.maxk; k++) if(!usedSlot[k]) slotAge[k]++;
+    } else {
+      cands.sort((a, b) => a.freq - b.freq);
+      cands.forEach((c, idx) => c.track = idx);
+    }
+    frames.push(cands);
+  }
+
+  // Enforce strict < Target byte cap if enabled
+  const kBits = Math.max(1, Math.ceil(Math.log2(P.maxk)));
+  const perPartialBits = (P.track ? kBits : 0) + P.nf + P.na;
+  const headerBits = 81;
+
+  function calcTotalBits(){
+    let bits = headerBits;
+    for(const fr of frames){
+      if(fr.length === 0) bits += 1;
+      else bits += 1 + kBits + fr.length * perPartialBits;
+    }
+    return bits;
+  }
+
+  let prunedCount = 0;
+  if(P.enforce){
+    const maxBits = (P.target - 1) * 8; // strictly < target bytes
+    while(calcTotalBits() > maxBits){
+      let worstFi = -1, worstPi = -1, worstScore = 1e9;
+      for(let fi = 0; fi < frames.length; fi++){
+        const fr = frames[fi];
+        for(let pi = 0; pi < fr.length; pi++){
+          // Preserve at least 1 primary partial per active frame until all secondary harmonics are pruned
+          const lonePenalty = fr.length === 1 ? 1000 : 0;
+          const sc = fr[pi].score + lonePenalty;
+          if(sc < worstScore){ worstScore = sc; worstFi = fi; worstPi = pi; }
+        }
+      }
+      if(worstFi < 0) break;
+      frames[worstFi].splice(worstPi, 1);
+      prunedCount++;
+    }
+  }
+
+  // Serialize BC2 bitstream
+  const bw = new BitW();
+  bw.w(0x42, 8); bw.w(0x43, 8); bw.w(0x32, 8); // "BC2"
+  bw.w(Math.round(SR / 100), 8);
+  bw.w(nf, 9);
+  bw.w(P.fps, 6);
+  bw.w(P.maxk, 4);
+  bw.w(P.nf, 4);
+  bw.w(P.na, 4);
+  bw.w(Math.round(fmin / 50), 7);
+  bw.w(Math.round(fmax / 100), 7);
+  bw.w(Math.round(P.preEmph / 100 * 15), 4);
+  bw.w(P.track ? 1 : 0, 4);
+
+  let activeFrames = 0, totalPartials = 0;
+  for(const fr of frames){
+    if(fr.length === 0){
+      bw.w(0, 1);
+    } else {
+      activeFrames++;
+      totalPartials += fr.length;
+      bw.w(1, 1);
+      bw.w(fr.length - 1, kBits);
+      for(const p of fr){
+        if(P.track) bw.w(p.track, kBits);
+        bw.w(p.qf, P.nf);
+        bw.w(p.qa, P.na);
+      }
+    }
+  }
+
+  return {
+    bytes: bw.bytes(),
+    stats: {
+      nf, activeFrames, silentFrames: nf - activeFrames,
+      totalPartials, prunedCount, kBits, perPartialBits, headerBits
+    }
+  };
+}
+
+function decodeBc2(bytes){
+  const br = new BitR(bytes);
+  if(br.r(8) !== 0x42 || br.r(8) !== 0x43 || br.r(8) !== 0x32) throw "Bad BC2 header";
+  const sr = br.r(8) * 100;
+  const nf = br.r(9);
+  const fps = br.r(6);
+  const maxk = br.r(4);
+  const bitsF = br.r(4);
+  const bitsA = br.r(4);
+  const fmin = br.r(7) * 50;
+  const fmax = br.r(7) * 100;
+  const preNorm = br.r(4) / 15;
+  const trackOn = (br.r(4) & 1) === 1;
+
+  const kBits = Math.max(1, Math.ceil(Math.log2(maxk)));
+  const hop = Math.round(sr / fps);
+  const total = nf * hop;
+  const y = new Float64Array(total);
+
+  const frameData = [];
+  for(let n = 0; n < nf; n++){
+    const active = br.r(1);
+    if(!active){ frameData.push([]); continue; }
+    const K = br.r(kBits) + 1;
+    const list = [];
+    for(let i = 0; i < K; i++){
+      const trk = trackOn ? br.r(kBits) : i;
+      const qf = br.r(bitsF);
+      const qa = br.r(bitsA);
+      list.push({
+        trk: Math.min(maxk - 1, trk),
+        f: dequantF(qf, fmin, fmax, bitsF),
+        a: Math.pow(10, dequantA(qa, bitsA) / 20)
+      });
+    }
+    frameData.push(list);
+  }
+
+  // Smooth sample-by-sample sinusoidal synthesis with full-frame linear envelope & pitch interpolation
+  const prevF = new Float64Array(maxk).fill(0);
+  const prevA = new Float64Array(maxk).fill(0);
+  const phase = new Float64Array(maxk).fill(0);
+
+  for(let n = 0; n < nf; n++){
+    const curF = new Float64Array(prevF);
+    const curA = new Float64Array(maxk).fill(0);
+    for(const item of frameData[n]){
+      curF[item.trk] = item.f;
+      curA[item.trk] = item.a;
+      // Snap frequency on new note onset so it doesn't glide from an old pitch
+      if(prevA[item.trk] === 0) prevF[item.trk] = item.f;
+    }
+
+    const s0 = n * hop, s1 = Math.min(total, (n + 1) * hop), len = s1 - s0;
+    for(let k = 0; k < maxk; k++){
+      const a0 = prevA[k], a1 = curA[k];
+      if(a0 === 0 && a1 === 0) continue;
+      const f0 = prevF[k] || curF[k], f1 = curF[k] || prevF[k];
+      let ph = phase[k];
+      for(let i = 0; i < len; i++){
+        const u = i / len;
+        const f = f0 + (f1 - f0) * u;
+        const a = a0 + (a1 - a0) * u;
+        ph += 2 * Math.PI * f / sr;
+        y[s0 + i] += a * Math.sin(ph);
+      }
+      phase[k] = ph % (2 * Math.PI);
+    }
+    for(let k = 0; k < maxk; k++){ prevF[k] = curF[k]; prevA[k] = curA[k]; }
+  }
+
+  // Inverse pre-emphasis + sub-band DC removal + normalization
+  const alpha = preNorm * 0.92;
+  let dc = 0, peak = 0;
+  for(let i = 0; i < total; i++){
+    if(i > 0) y[i] += alpha * y[i - 1];
+    dc = 0.995 * dc + 0.005 * y[i];
+    y[i] -= dc;
+    const ab = Math.abs(y[i]);
+    if(ab > peak) peak = ab;
+  }
+  if(peak > 0) for(let i = 0; i < total; i++) y[i] = (y[i] / peak) * 0.85;
+  return {y, nf, hop};
+}
+
+/* ---------- Minimal Self-Contained QR Encoder (Byte Mode, ECC-L, V1-V17) ---------- */
+const QR_VER_L = [
+  null,
+  [1,19,7,0,0,0,[]], [1,34,10,0,0,0,[6,18]], [1,55,15,0,0,0,[6,22]], [1,80,20,0,0,0,[6,26]],
+  [1,108,26,0,0,0,[6,30]], [2,68,18,0,0,0,[6,34]], [2,78,20,0,0,0,[6,22,38]],
+  [2,97,24,0,0,0,[6,24,42]], [2,116,30,0,0,0,[6,26,46]], [2,68,18,2,69,18,[6,28,50]],
+  [4,81,20,0,0,0,[6,30,54]], [2,92,24,2,93,24,[6,32,58]], [4,107,26,0,0,0,[6,34,62]],
+  [3,115,30,1,116,30,[6,26,46,66]], [5,87,22,1,88,22,[6,26,48,70]],
+  [5,98,24,1,99,24,[6,26,50,74]], [1,107,28,5,108,28,[6,30,54,78]]
+];
+const GF_EXP = new Uint8Array(512), GF_LOG = new Uint8Array(256);
+(() => {
+  let x = 1;
+  for(let i = 0; i < 255; i++){
+    GF_EXP[i] = x; GF_LOG[x] = i;
+    x <<= 1; if(x & 0x100) x ^= 0x11d;
+  }
+  for(let i = 255; i < 512; i++) GF_EXP[i] = GF_EXP[i - 255];
+})();
+function gfMul(a, b){ return (a === 0 || b === 0) ? 0 : GF_EXP[GF_LOG[a] + GF_LOG[b]]; }
+function rsGenPoly(deg){
+  let p = [1];
+  for(let i = 0; i < deg; i++){
+    const next = new Array(p.length + 1).fill(0);
+    for(let j = 0; j < p.length; j++){
+      next[j] ^= p[j];
+      next[j+1] ^= gfMul(p[j], GF_EXP[i]);
+    }
+    p = next;
+  }
+  return p;
+}
+function rsRemainder(data, ecLen){
+  const gen = rsGenPoly(ecLen);
+  const res = new Uint8Array(data.length + ecLen);
+  res.set(data);
+  for(let i = 0; i < data.length; i++){
+    const coef = res[i];
+    if(coef !== 0) for(let j = 1; j < gen.length; j++) res[i + j] ^= gfMul(gen[j], coef);
+  }
+  return res.slice(data.length);
+}
+
+function drawQrCode(canvas, text){
+  const ctx = canvas.getContext("2d");
+  const bytes = new TextEncoder().encode(text);
+  let ver = -1;
+  for(let v = 1; v <= 17; v++){
+    const info = QR_VER_L[v];
+    const totalData = info[0]*info[1] + info[3]*info[4];
+    const overhead = v >= 10 ? 3 : 2;
+    if(bytes.length + overhead <= totalData){ ver = v; break; }
+  }
+  if(ver < 0){
+    canvas.width = canvas.height = 160;
+    ctx.fillStyle = "#fff"; ctx.fillRect(0,0,160,160);
+    ctx.fillStyle = "#111"; ctx.font = "12px sans-serif";
+    ctx.fillText("Over 644 B64 chars", 18, 76);
+    ctx.fillText("Lower Target Size", 24, 94);
+    return null;
+  }
+  const [b1, d1, ec1, b2, d2, ec2, align] = QR_VER_L[ver];
+  const totalData = b1 * d1 + b2 * d2;
+  const bw = new BitW();
+  bw.w(0b0100, 4);
+  bw.w(bytes.length, ver >= 10 ? 16 : 8);
+  for(const b of bytes) bw.w(b, 8);
+  bw.w(0, Math.min(4, totalData * 8 - (bw.buf.length * 8 + bw.n)));
+  const raw = bw.bytes();
+  const dataCW = new Uint8Array(totalData);
+  dataCW.set(raw.slice(0, totalData));
+  for(let i = raw.length; i < totalData; i++) dataCW[i] = ((i - raw.length) & 1) ? 0x11 : 0xec;
+
+  const blocks = [], ecs = [];
+  let ptr = 0;
+  for(let i = 0; i < b1; i++){ const bl = dataCW.slice(ptr, ptr+d1); ptr += d1; blocks.push(bl); ecs.push(rsRemainder(bl, ec1)); }
+  for(let i = 0; i < b2; i++){ const bl = dataCW.slice(ptr, ptr+d2); ptr += d2; blocks.push(bl); ecs.push(rsRemainder(bl, ec2)); }
+
+  const interleaved = [];
+  const maxD = Math.max(d1, d2), maxE = Math.max(ec1, ec2);
+  for(let i = 0; i < maxD; i++) for(const bl of blocks) if(i < bl.length) interleaved.push(bl[i]);
+  for(let i = 0; i < maxE; i++) for(const ec of ecs) if(i < ec.length) interleaved.push(ec[i]);
+
+  const sz = ver * 4 + 17;
+  const mod = Array.from({length: sz}, () => new Int8Array(sz)); // 0=empty, 1=black, -1=white
+  const res = Array.from({length: sz}, () => new Uint8Array(sz));
+
+  function setMod(r, c, v, isFunc = true){
+    if(r >= 0 && r < sz && c >= 0 && c < sz){
+      mod[r][c] = v ? 1 : -1;
+      if(isFunc) res[r][c] = 1;
+    }
+  }
+  function placeFinder(r0, c0){
+    for(let r = -1; r <= 7; r++) for(let c = -1; c <= 7; c++){
+      const inBox = r >= 0 && r <= 6 && c >= 0 && c <= 6;
+      const val = inBox && (r === 0 || r === 6 || c === 0 || c === 6 || (r >= 2 && r <= 4 && c >= 2 && c <= 4));
+      setMod(r0 + r, c0 + c, val);
+    }
+  }
+  placeFinder(0, 0); placeFinder(0, sz - 7); placeFinder(sz - 7, 0);
+  for(let i = 8; i < sz - 8; i++){ setMod(6, i, (i & 1) === 0); setMod(i, 6, (i & 1) === 0); }
+  setMod(sz - 8, 8, true);
+
+  for(const ar of align) for(const ac of align){
+    if(res[ar][ac]) continue;
+    for(let r = -2; r <= 2; r++) for(let c = -2; c <= 2; c++){
+      setMod(ar + r, ac + c, Math.abs(r) === 2 || Math.abs(c) === 2 || (r === 0 && c === 0));
+    }
+  }
+  // Reserve format & version areas
+  for(let i = 0; i < 9; i++){ if(!res[8][i]) res[8][i] = 1; if(!res[i][8]) res[i][8] = 1; }
+  for(let i = 0; i < 8; i++){ res[8][sz - 1 - i] = 1; res[sz - 1 - i][8] = 1; }
+  if(ver >= 7){
+    let vbits = ver << 12;
+    for(let i = 17; i >= 12; i--) if((vbits >>> i) & 1) vbits ^= (0x1f25 << (i - 12));
+    const vInfo = (ver << 12) | vbits;
+    for(let i = 0; i < 18; i++){
+      const b = ((vInfo >>> i) & 1) === 1;
+      setMod(Math.floor(i / 3), sz - 11 + (i % 3), b);
+      setMod(sz - 11 + (i % 3), Math.floor(i / 3), b);
+    }
+  }
+
+  // Zigzag placement with Mask 0: (r + c) % 2 === 0
+  let bitIdx = 0, dir = -1, col = sz - 1;
+  while(col > 0){
+    if(col === 6) col--;
+    for(let step = 0; step < sz; step++){
+      const r = dir === -1 ? (sz - 1 - step) : step;
+      for(let dc = 0; dc < 2; dc++){
+        const c = col - dc;
+        if(res[r][c]) continue;
+        const byteI = bitIdx >> 3, shift = 7 - (bitIdx & 7);
+        let bit = byteI < interleaved.length ? ((interleaved[byteI] >>> shift) & 1) : 0;
+        if(((r + c) & 1) === 0) bit ^= 1;
+        mod[r][c] = bit ? 1 : -1;
+        bitIdx++;
+      }
+    }
+    dir = -dir;
+    col -= 2;
+  }
+
+  // Format bits for ECC-L (01) + Mask 0 (000) => 01000 -> 0x77c4
+  const fmt = 0x77c4;
+  for(let i = 0; i < 15; i++){
+    const b = ((fmt >>> i) & 1) === 1;
+    if(i < 6) mod[8][i] = b ? 1 : -1;
+    else if(i === 6) mod[8][7] = b ? 1 : -1;
+    else if(i === 7) mod[8][8] = b ? 1 : -1;
+    else if(i === 8) mod[7][8] = b ? 1 : -1;
+    else mod[14 - i][8] = b ? 1 : -1;
+
+    if(i < 8) mod[sz - 1 - i][8] = b ? 1 : -1;
+    else mod[8][sz - 15 + i] = b ? 1 : -1;
+  }
+
+  const scale = 3, quiet = 4, px = (sz + quiet * 2) * scale;
+  canvas.width = canvas.height = px;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, px, px);
+  ctx.fillStyle = "#000000";
+  for(let r = 0; r < sz; r++){
+    for(let c = 0; c < sz; c++){
+      if(mod[r][c] === 1) ctx.fillRect((c + quiet) * scale, (r + quiet) * scale, scale, scale);
+    }
+  }
+  return ver;
+}
+
+/* ---------- Visualization, Playback & Reporting ---------- */
+function drawWave(cv, sig, color){
+  const ctx = cv.getContext("2d"), W = cv.width = cv.clientWidth * 2, H = cv.height = 112;
+  ctx.clearRect(0, 0, W, H);
+  ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.beginPath();
+  const step = Math.max(1, Math.floor(sig.length / W));
+  for(let xpx = 0; xpx < W; xpx++){
+    let mn = 1e9, mx = -1e9;
+    const s = xpx * step, e = Math.min(sig.length, s + step);
+    for(let i = s; i < e; i += Math.max(1, Math.floor(step / 16))){
+      const v = sig[i]; if(v < mn) mn = v; if(v > mx) mx = v;
+    }
+    ctx.moveTo(xpx + 0.5, H / 2 * (1 - mx * 0.92));
+    ctx.lineTo(xpx + 0.5, H / 2 * (1 - mn * 0.92));
+  }
+  ctx.stroke();
+}
+
+function bytesToBase64(u8){
+  let bin = "";
+  for(let i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]);
+  return btoa(bin);
+}
+
+function updateAudioSource(mode, autoPlay = false){
+  if(!clipAudio) return;
+  abMode = mode;
+  const p = document.getElementById("player");
+  const wasPlaying = !p.paused;
+  const curTime = p.currentTime || 0;
+  if(p.dataset.url) URL.revokeObjectURL(p.dataset.url);
+  const sig = (mode === "orig" || !decoded) ? clipAudio : decoded.y;
+  const url = URL.createObjectURL(toWav16(sig));
+  p.dataset.url = url;
+  p.src = url;
+  p.loop = loopOn;
+  p.onloadedmetadata = () => {
+    if(wasPlaying && !autoPlay) p.currentTime = Math.min(curTime, p.duration || curTime);
+    if(autoPlay || wasPlaying) p.play().catch(()=>{});
+  };
+  document.getElementById("btnPlayOrig").classList.toggle("active-ab", mode === "orig");
+  document.getElementById("btnPlayDec").classList.toggle("primary", mode === "dec");
+}
+
+function updateMetrics(enc){
+  const rawLen = enc.bytes.length;
+  const b64 = bytesToBase64(enc.bytes);
+  const b64Len = b64.length;
+  const ok = rawLen < P.target;
+
+  const mRaw = document.getElementById("mRawBytes");
+  mRaw.textContent = `${rawLen} / ${P.target} B`;
+  mRaw.className = "metric-val " + (ok ? "pass" : "fail");
+  document.getElementById("mRawSub").textContent =
+    `${Math.round(rawLen * 8 / (clipAudio.length / SR))} bps · ${ok ? "UNDER LIMIT" : "OVER LIMIT"}`;
+
+  const mQr = document.getElementById("mQrChars");
+  mQr.textContent = `${b64Len} chars`;
+  mQr.className = "metric-val " + (b64Len <= 520 ? "pass" : (b64Len <= 644 ? "warn" : "fail"));
+
+  const qrVer = drawQrCode(document.getElementById("cvQr"), b64);
+  document.getElementById("mQrSub").textContent = qrVer ? `QR Version ${qrVer}-L (phone-safe)` : "Too dense for V17 QR";
+  document.getElementById("qrMeta").innerHTML =
+    `<b>QR Payload:</b> ${b64Len} Base64 chars (${rawLen} raw bytes). ` +
+    (qrVer ? `Fits <b>QR V${qrVer}-L</b> (${qrVer*4+17}×${qrVer*4+17} modules) — easily readable by phone cameras.`
+           : `Reduce Target Size below 480 B for reliable phone scanning.`);
+
+  // Byte allocation bar
+  const st = enc.stats;
+  const hdrB = st.headerBits / 8;
+  const frmB = (st.silentFrames * 1 + st.activeFrames * (1 + st.kBits)) / 8;
+  const frqB = (st.totalPartials * ((P.track ? st.kBits : 0) + P.nf)) / 8;
+  const ampB = (st.totalPartials * P.na) / 8;
+  const tot = Math.max(0.1, hdrB + frmB + frqB + ampB);
+
+  document.getElementById("segHdr").style.width = (hdrB / tot * 100).toFixed(1) + "%";
+  document.getElementById("segFrm").style.width = (frmB / tot * 100).toFixed(1) + "%";
+  document.getElementById("segFrq").style.width = (frqB / tot * 100).toFixed(1) + "%";
+  document.getElementById("segAmp").style.width = (ampB / tot * 100).toFixed(1) + "%";
+  document.getElementById("byteLegend").innerHTML =
+    `<span><i class="dot" style="background:#64748b"></i>Hdr ${hdrB.toFixed(0)}B</span>` +
+    `<span><i class="dot" style="background:#38bdf8"></i>Frames ${frmB.toFixed(0)}B</span>` +
+    `<span><i class="dot" style="background:#4cc38a"></i>Pitch ${frqB.toFixed(0)}B</span>` +
+    `<span><i class="dot" style="background:#fbbf24"></i>Amp ${ampB.toFixed(0)}B</span>`;
+
+  const avgK = st.activeFrames ? (st.totalPartials / st.activeFrames).toFixed(1) : "0";
+  const fmin = Math.min(P.fmin, P.fmax - 500), fmax = Math.max(P.fmax, fmin + 500);
+  const centsStep = (1200 * Math.log2(fmax / fmin) / ((1 << P.nf) - 1)).toFixed(1);
+  document.getElementById("decStatsLbl").textContent = `${st.activeFrames}/${st.nf} active frames · avg ${avgK} partials`;
+
+  document.getElementById("factorInsight").innerHTML =
+    `<b>Factor Sensitivity:</b> ${st.silentFrames} silent frames saved ~${Math.round(st.silentFrames * st.perPartialBits * 2 / 8)}B. ` +
+    `Pitch uses <b>${P.nf}b</b> (${centsStep} cents/step); Amp uses <b>${P.na}b</b> (${((DBMAX-DBMIN)/((1<<P.na)-1)).toFixed(1)} dB/step). ` +
+    (st.prunedCount > 0 ? `<b>Budget Cap pruned ${st.prunedCount} weak partials</b> to stay under ${P.target}B.` : `No partials pruned.`);
+}
+
+function run(){
+  if(!clipAudio) return;
+  try{
+    const enc = analyzeAndPack(clipAudio);
+    bitstream = enc.bytes;
+    decoded = decodeBc2(bitstream);
+    drawWave(document.getElementById("cvDec"), decoded.y, "#4cc38a");
+    updateMetrics(enc);
+    for(const id of ["btnPlayDec","btnAb","btnWav","btnBc2","btnCopyB64","btnAutoFit"]){
+      document.getElementById(id).disabled = false;
+    }
+    if(abMode === "dec") updateAudioSource("dec", false);
+  }catch(err){
+    document.getElementById("factorInsight").textContent = "Codec error: " + err;
+  }
+}
+function schedule(){ clearTimeout(timer); timer = setTimeout(run, 140); }
+
+function setClipFromFull(){
+  if(!fullAudio) return;
+  const maxSamples = Math.round(MAX_SEC * SR);
+  const startSamp = Math.round(offsetSec * SR);
+  clipAudio = fullAudio.slice(startSamp, startSamp + maxSamples);
+  drawWave(document.getElementById("cvOrig"), clipAudio, "#38bdf8");
+  document.getElementById("btnPlayOrig").disabled = false;
+  run();
+}
+
+/* ---------- Auto-Fit Optimizer ---------- */
+document.getElementById("btnAutoFit").addEventListener("click", () => {
+  if(!clipAudio) return;
+  // Find highest FPS & MaxK that naturally fit under target without heavy pruning
+  P.enforce = true; cEnforce.checked = true;
+  let best = null;
+  for(const fps of [26, 22, 18, 15]){
+    for(const maxk of [6, 5, 4, 3]){
+      P.fps = fps; P.maxk = maxk; P.nf = 10; P.na = 6;
+      const test = analyzeAndPack(clipAudio);
+      if(test.stats.prunedCount <= test.stats.activeFrames * 0.4){
+        best = {fps, maxk}; break;
+      }
+    }
+    if(best) break;
+  }
+  if(best){ P.fps = best.fps; P.maxk = best.maxk; }
+  syncUI(); saveParams(); run();
+});
+
+/* ---------- File & Transport Events ---------- */
+document.getElementById("btnLoad").addEventListener("click", () => document.getElementById("file").click());
+document.getElementById("file").addEventListener("change", e => {
+  const f = e.target.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try{
+      const w = parseWav(rd.result);
+      fullAudio = resample(w.x, w.sr);
+      const totalSec = fullAudio.length / SR;
+      offsetSec = 0;
+      const trimBox = document.getElementById("trimBox");
+      if(totalSec > MAX_SEC + 0.05){
+        trimBox.style.display = "block";
+        const sOff = document.getElementById("s-offset");
+        sOff.max = (totalSec - MAX_SEC).toFixed(1);
+        sOff.value = 0;
+        document.getElementById("o-offset").textContent = "0.0 s";
+      } else {
+        trimBox.style.display = "none";
+      }
+      document.getElementById("fileInfo").textContent =
+        `${f.name} (${w.sr}Hz → 16kHz, ${totalSec.toFixed(1)}s${totalSec > MAX_SEC ? ", trimmed to 5.0s" : ""})`;
+      setClipFromFull();
+    }catch(err){ document.getElementById("fileInfo").textContent = "Load error: " + err; }
+  };
+  rd.readAsArrayBuffer(f);
+});
+
+document.getElementById("s-offset").addEventListener("input", e => {
+  offsetSec = +e.target.value;
+  document.getElementById("o-offset").textContent = offsetSec.toFixed(1) + " s";
+  clearTimeout(timer); timer = setTimeout(setClipFromFull, 120);
+});
+
+document.getElementById("btnDemo").addEventListener("click", () => {
+  fullAudio = generateSampleBirdsong();
+  offsetSec = 0;
+  document.getElementById("trimBox").style.display = "none";
+  document.getElementById("fileInfo").textContent = "Synthetic 5.0s Birdsong (Whistle + Trill + Chirps @ 16kHz)";
+  setClipFromFull();
+});
+
+document.getElementById("btnPlayOrig").addEventListener("click", () => updateAudioSource("orig", true));
+document.getElementById("btnPlayDec").addEventListener("click", () => updateAudioSource("dec", true));
+document.getElementById("btnAb").addEventListener("click", () => updateAudioSource(abMode === "dec" ? "orig" : "dec", true));
+document.getElementById("btnLoop").addEventListener("click", e => {
+  loopOn = !loopOn;
+  document.getElementById("player").loop = loopOn;
+  e.target.textContent = "Loop: " + (loopOn ? "On" : "Off");
+});
+
+document.getElementById("btnWav").addEventListener("click", () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(toWav16(decoded.y));
+  a.download = `birdsong_${bitstream.length}B.wav`;
+  a.click();
+});
+document.getElementById("btnBc2").addEventListener("click", () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([bitstream], {type:"application/octet-stream"}));
+  a.download = `birdsong_${bitstream.length}B.bc2`;
+  a.click();
+});
+document.getElementById("btnCopyB64").addEventListener("click", async () => {
+  await navigator.clipboard.writeText(bytesToBase64(bitstream));
+  const btn = document.getElementById("btnCopyB64");
+  btn.textContent = "Copied!";
+  setTimeout(() => btn.textContent = "Copy QR Base64", 1200);
+});
+
+if("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")){
+  navigator.serviceWorker.register("./sw.js").catch(()=>{});
+}
+</script>
+</body>
+</html>
