@@ -77,8 +77,13 @@ input[type=checkbox]{width:20px;height:20px;accent-color:var(--acc)}
 
 canvas.wave{width:100%;height:56px;background:var(--bg);border-radius:8px;display:block;margin-top:6px}
 .cv-lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-top:6px}
-#qrBox{display:flex;gap:12px;align-items:center;margin-top:8px}
-#cvQr{width:136px;height:136px;background:#fff;padding:6px;border-radius:8px;flex-shrink:0;image-rendering:pixelated}
+#qrBox{display:flex;gap:12px;align-items:center;margin-top:10px}
+#qrBox.zoomed{flex-direction:column;align-items:center}
+#cvQr{
+  width:184px;height:184px;background:#fff;padding:8px;border-radius:10px;
+  flex-shrink:0;image-rendering:pixelated;cursor:pointer;
+}
+#qrBox.zoomed #cvQr{width:min(310px, 82vw);height:min(310px, 82vw)}
 .small{font-size:12px;color:var(--dim)}
 .insight{font-size:12px;background:rgba(76,195,138,.1);border-left:3px solid var(--acc);padding:8px 10px;border-radius:6px;margin-top:8px}
 
@@ -213,9 +218,9 @@ canvas.wave{width:100%;height:56px;background:var(--bg);border-radius:8px;displa
     <button id="btnOpenPlayer" disabled>Test in Player</button>
   </div>
   <div id="qrBox">
-    <canvas id="cvQr" width="160" height="160"></canvas>
+    <canvas id="cvQr" width="240" height="240" title="Tap to enlarge QR"></canvas>
     <div class="small" id="qrMeta">
-      Scan test: encodes Base64 payload so standard iOS/Android camera readers never corrupt binary bytes.
+      Tap the QR code to enlarge it for easy camera scanning. Encodes Base64 payload for standard mobile readers.
     </div>
   </div>
 </div>
@@ -326,6 +331,9 @@ document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("clic
 document.getElementById("btnReset").addEventListener("click", () => {
   P = Object.assign({}, DEF);
   syncUI(); saveParams(); run();
+});
+document.getElementById("cvQr").addEventListener("click", () => {
+  document.getElementById("qrBox").classList.toggle("zoomed");
 });
 
 function syncUI(){
@@ -450,7 +458,6 @@ function finishRecording(){
   }
   recChunks = [];
 
-  // Normalize distant outdoor recordings gently so Silence Floor slider works predictably
   if(rawPeak > 0.004 && rawPeak < 0.75){
     const gain = 0.85 / rawPeak;
     for(let i = 0; i < raw.length; i++) raw[i] *= gain;
@@ -911,7 +918,7 @@ function decodeBc2(bytes){
   return {y, nf, hop};
 }
 
-/* ---------- Minimal Self-Contained QR Encoder (Byte Mode, ECC-L, V1-V17) ---------- */
+/* ---------- ISO/IEC 18004 QR Code Generator (Byte Mode, ECC-L, V1-V17) ---------- */
 const QR_VER_L = [
   null,
   [1,19,7,0,0,0,[]], [1,34,10,0,0,0,[6,18]], [1,55,15,0,0,0,[6,22]], [1,80,20,0,0,0,[6,26]],
@@ -965,11 +972,11 @@ function drawQrCode(canvas, text){
     if(bytes.length + overhead <= totalData){ ver = v; break; }
   }
   if(ver < 0){
-    canvas.width = canvas.height = 160;
-    ctx.fillStyle = "#fff"; ctx.fillRect(0,0,160,160);
-    ctx.fillStyle = "#111"; ctx.font = "12px sans-serif";
-    ctx.fillText("Over 644 B64 chars", 18, 76);
-    ctx.fillText("Lower Target Size", 24, 94);
+    canvas.width = canvas.height = 200;
+    ctx.fillStyle = "#fff"; ctx.fillRect(0,0,200,200);
+    ctx.fillStyle = "#111"; ctx.font = "13px sans-serif";
+    ctx.fillText("Over 644 B64 chars", 32, 92);
+    ctx.fillText("Lower Target Size", 40, 114);
     return null;
   }
   const [b1, d1, ec1, b2, d2, ec2, align] = QR_VER_L[ver];
@@ -1015,12 +1022,14 @@ function drawQrCode(canvas, text){
   for(let i = 8; i < sz - 8; i++){ setMod(6, i, (i & 1) === 0); setMod(i, 6, (i & 1) === 0); }
   setMod(sz - 8, 8, true);
 
+  // Place all alignment patterns (skipping only the 3 corner finder positions)
   for(const ar of align) for(const ac of align){
-    if(res[ar][ac]) continue;
+    if((ar === 6 && ac === 6) || (ar === 6 && ac === sz - 7) || (ar === sz - 7 && ac === 6)) continue;
     for(let r = -2; r <= 2; r++) for(let c = -2; c <= 2; c++){
       setMod(ar + r, ac + c, Math.abs(r) === 2 || Math.abs(c) === 2 || (r === 0 && c === 0));
     }
   }
+
   for(let i = 0; i < 9; i++){ if(!res[8][i]) res[8][i] = 1; if(!res[i][8]) res[i][8] = 1; }
   for(let i = 0; i < 8; i++){ res[8][sz - 1 - i] = 1; res[sz - 1 - i][8] = 1; }
   if(ver >= 7){
@@ -1053,20 +1062,21 @@ function drawQrCode(canvas, text){
     col -= 2;
   }
 
+  // Format info: ECC-L (01) + Mask 0 (000) => 0x77c4, placed MSB-first (bit 14 down to 0)
   const fmt = 0x77c4;
   for(let i = 0; i < 15; i++){
-    const b = ((fmt >>> i) & 1) === 1;
+    const b = ((fmt >>> (14 - i)) & 1) === 1;
     if(i < 6) mod[8][i] = b ? 1 : -1;
     else if(i === 6) mod[8][7] = b ? 1 : -1;
     else if(i === 7) mod[8][8] = b ? 1 : -1;
     else if(i === 8) mod[7][8] = b ? 1 : -1;
     else mod[14 - i][8] = b ? 1 : -1;
 
-    if(i < 8) mod[sz - 1 - i][8] = b ? 1 : -1;
+    if(i < 7) mod[sz - 1 - i][8] = b ? 1 : -1;
     else mod[8][sz - 15 + i] = b ? 1 : -1;
   }
 
-  const scale = 3, quiet = 4, px = (sz + quiet * 2) * scale;
+  const scale = 4, quiet = 4, px = (sz + quiet * 2) * scale;
   canvas.width = canvas.height = px;
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, px, px);
@@ -1143,7 +1153,7 @@ function updateMetrics(enc){
   document.getElementById("mQrSub").textContent = qrVer ? `QR Version ${qrVer}-L (phone-safe)` : "Too dense for V17 QR";
   document.getElementById("qrMeta").innerHTML =
     `<b>QR Payload:</b> ${b64Len} Base64 chars (${rawLen} raw bytes). ` +
-    (qrVer ? `Fits <b>QR V${qrVer}-L</b> (${qrVer*4+17}×${qrVer*4+17} modules) — easily readable by phone cameras.`
+    (qrVer ? `<b>QR V${qrVer}-L</b> (${qrVer*4+17}×${qrVer*4+17} modules). Tap QR image to zoom larger for scanning.`
            : `Reduce Target Size below 480 B for reliable phone scanning.`);
 
   const st = enc.stats;
